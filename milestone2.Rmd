@@ -9,14 +9,23 @@ output: html_document
 library(ggplot2)
 library(readr)
 library(tidyverse)
+library(lubridate)
 ```
 
 ```{r}
 df<-read_csv("COVID-19_Vaccinations_in_the_United_States_County.csv")
+df$Date<-mdy(df$Date)
 filtered_dataframe<-df %>% 
-  filter(Recip_State%in%c("IL","IN","KS","MI","MN","MS","NE","ND","OH","SD","WI")) %>% 
-  mutate(Date=as.Date(Date)) %>% 
-  filter(Date>="0003-03-20") %>% 
-  transmute(Date,Recip_County,Recip_State,Administered_Dose1_Pop_Pct,Completeness_pct,Metro_status)
-write_csv(filtered_dataframe,"/Users/matthewvoss/Documents/stat479_groupproject/Stat479_group13/filtered.csv")
+  filter(Recip_State%in%c("IL","IN","IA","KS","MI","MN","NE","ND","OH","SD","WI","MO")) %>% 
+  filter(Date>="2022-03-03") %>% 
+  transmute(Date,Recip_County,Recip_State,Administered_Dose1_Pop_Pct,Series_Complete_Pop_Pct,Metro_status)
+write_csv(filtered_dataframe,"/Users/matthewvoss/Documents/stat479_groupproject/Stat479_group13/milestone2.csv")
 ```
+
+```{r}
+
+```
+
+
+
+
