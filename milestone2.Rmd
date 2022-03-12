@@ -14,7 +14,7 @@ library(lubridate)
 
 ```{r}
 df<-read_csv("COVID-19_Vaccinations_in_the_United_States_County.csv")
-df$Date<-mdy(df$Date)
+df$Date<-as.Date(df$Date, format = "%m/%d/%Y")
 filtered_dataframe<-df %>% 
   filter(Recip_State%in%c("IL","IN","IA","KS","MI","MN","NE","ND","OH","SD","WI","MO")) %>% 
   filter(Date>="2022-03-03") %>% 
@@ -23,9 +23,150 @@ write_csv(filtered_dataframe,"/Users/matthewvoss/Documents/stat479_groupproject/
 ```
 
 ```{r}
-
+filtered_dataframe<-read_csv("milestone2.csv")
+df1<-filtered_dataframe %>% 
+  filter(!Recip_County=="Unknown County") %>% 
+  group_by(Recip_County,Recip_State) %>% 
+  summarise(first=mean(Administered_Dose1_Pop_Pct),
+            second=mean(Series_Complete_Pop_Pct)) %>% 
+  ungroup()
+  ggplot(df1)+
+  geom_bar(aes(Recip_County,first),stat="identity")+
+  facet_wrap(~Recip_State)
+  ggplot(df1)+
+  geom_bar(aes(Recip_County,second),stat="identity")+
+  facet_wrap(~Recip_State)
+ggplot(filtered_dataframe)+
+  geom_bar(aes(Recip_County,Administered_Dose1_Pop_Pct),stat = "identity")+
+  facet_grid(Date~Repcip_State)
+filtered_dataframe %>% 
+  group_by(Recip_County) %>% 
+  summarise(var=n()) %>% 
+  mutate(var=var(var))
+p<-list()
+p[["Date"]]<-ggplot(filtered_dataframe)+
+  geom_bar(aes(Date))
+p[["Recip_County"]]<-ggplot(filtered_dataframe)+
+  geom_bar(aes(Recip_County))
+p[["Recip_State"]]<-ggplot(filtered_dataframe)+
+  geom_bar(aes(Recip_State))
+p[["Administered_Dose1_Pop_Pct"]]<-ggplot(filtered_dataframe)+
+  geom_bar(aes(Administered_Dose1_Pop_Pct))
+p[["Series_Complete_Pop_Pct"]]<-ggplot(filtered_dataframe)+
+  geom_bar(aes(Series_Complete_Pop_Pct))
+p[["Metro_status"]]<-ggplot(filtered_dataframe)+
+  geom_bar(aes(Metro_status))
+(p[["Date"]]+p[["Recip_County"]])/(p[["Recip_State"]]+p[["Administered_Dose1_Pop_Pct"]])/(p[["Series_Complete_Pop_Pct"]]+p[["Metro_status"]])+
+  plot_annotation(title = "Vaccination Data Variables from March 3- March 10 in the Midwest")
 ```
 
+```{r}
+library("robservable")
+library("leaflet")
+library("readr")
+df<-read_csv("milestone2.csv")
+tail(df)
+```
 
+```{r}
+transmission<-read_csv("United_States_COVID-19_County_Level_of_Community_Transmission_Historical_Changes.csv")
+```
 
+```{r}
+transmission$date = as.Date(transmission$date, format = "%m/%d/%Y")
+transmission_new <- transmission %>% 
+  filter(date >= "2022-03-03") %>% 
+  filter(state_name %in% c("Illinois", "Indiana", "Iowa", "Kansas", "Michigan", "Minnesota", "Missouri", "Nebraska", "North Dakota", "Ohio", "South Dakota", "Wisconsin")) %>% 
+  select(state_name, county_name, date, percent_test_results_reported_positive_last_7_days, community_transmission_level) %>% 
+  rename(positive_pct = percent_test_results_reported_positive_last_7_days, transmission_level = community_transmission_level)
+```
 
+```{r}
+transmission_new %>% 
+  ggplot() +
+  geom_point(aes(x=state_name, y=positive_pct))
+
+transmission_new %>% 
+  filter(state_name == "Iowa")
+
+transmission_new %>% 
+  ggplot() +
+  geom_point(aes(x=county_name, y=positive_pct))
+
+transmission_new %>% 
+  ggplot() +
+  geom_point(aes(x=date, y=positive_pct))
+
+transmission_new %>% 
+  filter(date == c("2022-03-08", "2022-03-09"))
+```
+
+```{r}
+transmission$date = as.Date(transmission$date, format = "%m/%d/%Y")
+transmission_new <- transmission %>% 
+  filter(date >= "2022-03-01" & date <="2022-03-07") %>% # change the date
+  filter(state_name %in% c("Illinois", "Indiana", "Iowa", "Kansas", "Michigan", "Minnesota", "Missouri", "Nebraska", "North Dakota", "Ohio", "South Dakota", "Wisconsin")) %>% 
+  select(state_name, county_name, date, percent_test_results_reported_positive_last_7_days, community_transmission_level) %>% 
+  rename(positive_pct = percent_test_results_reported_positive_last_7_days, transmission_level = community_transmission_level)
+
+for(i in 1:nrow(transmission_new)){
+  if (is.na(transmission_new[i,"positive_pct"]) == TRUE){
+    transmission_mean = transmission_new %>% 
+      filter(date == transmission_new[i, "date"], 
+             state_name == transmission_new[i, "state_name"]) %>% 
+      summarise(mean = mean(transmission_new[,"positive_pct"], na.rm = TRUE)) %>% 
+      pull(unique(mean))
+    transmission_new[i,"positive_pct"] = transmission_mean
+  }
+}
+```
+
+```{r}
+head(transmission_new)
+sum(is.na(transmission_new$positive_pct))
+
+transmission_new %>% 
+  ggplot() +
+  geom_point(aes(x=state_name, y=positive_pct))
+
+transmission_new %>% 
+  filter(state_name == "Iowa")
+
+transmission_new %>% 
+  ggplot() +
+  geom_point(aes(x=county_name, y=positive_pct))
+
+transmission_new %>% 
+  ggplot() +
+  geom_point(aes(x=date, y=positive_pct))
+```
+
+```{r}
+transmission_new %>% 
+  filter(state_name=="Nebraska") %>% 
+  group_by(date) %>% 
+  mutate(positive_pct=mean(positive_pct,na.rm=T))
+
+transmission_new %>% 
+  filter(!state_name=="Iowa") %>% 
+  mutate(positive_pct=mean(positive_pct,na.rm=T)) %>% 
+  ggplot(aes(date,positive_pct,fill=state_name))+
+  geom_bar(position = position_dodge(),stat = "identity")+
+  theme(panel.background = element_rect("white"))
+```
+
+```{r Transmission Rate Variables}
+t<-list()
+t[["state_name"]]<-ggplot(transmission_new)+
+  geom_bar(aes(state_name))+theme(axis.text.x = element_text(angle = 45))
+t[["county_name"]]<-ggplot(transmission_new)+
+  geom_bar(aes(county_name))
+t[["date"]]<-ggplot(transmission_new)+
+  geom_bar(aes(date))
+t[["positive_pct"]]<-ggplot(transmission_new)+
+  geom_bar(aes(positive_pct))
+t[["transmission_level"]]<-ggplot(transmission_new)+
+  geom_bar(aes(transmission_level))
+(t[["state_name"]]+t[["county_name"]])/(t[["date"]]+t[["positive_pct"]])/t[["transmission_level"]]+
+  plot_annotation(title = "Transmission Rate Dataset Variables from March 3- March 10 in Midwest")
+```
